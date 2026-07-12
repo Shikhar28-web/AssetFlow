@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block title %}Organization Setup - AssetFlow{% endblock %}
+{% block page_header %}Organization Setup{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs border-secondary mb-4" id="orgTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link text-light {% if active_tab == 'departments' %}active fw-bold{% endif %}" id="departments-tab" data-bs-toggle="tab" data-bs-target="#departments" type="button" role="tab" aria-controls="departments" aria-selected="true" onclick="window.history.replaceState(null, null, '?tab=departments')">
+        <i class="fa-solid fa-building me-2"></i> Departments
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link text-light {% if active_tab == 'categories' %}active fw-bold{% endif %}" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories" type="button" role="tab" aria-controls="categories" aria-selected="false" onclick="window.history.replaceState(null, null, '?tab=categories')">
+        <i class="fa-solid fa-tags me-2"></i> Asset Categories
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link text-light {% if active_tab == 'employees' %}active fw-bold{% endif %}" id="employees-tab" data-bs-toggle="tab" data-bs-target="#employees" type="button" role="tab" aria-controls="employees" aria-selected="false" onclick="window.history.replaceState(null, null, '?tab=employees')">
+        <i class="fa-solid fa-users me-2"></i> Employee Directory
+      </button>
+    </li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content text-white">
+    <!-- Departments Tab -->
+    <div class="tab-pane fade {% if active_tab == 'departments' %}show active{% endif %}" id="departments" role="tabpanel" aria-labelledby="departments-tab">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">Departments</h5>
+        <a href="{% url 'department_create' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> Add Department</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Department Head</th>
+              <th>Parent Department</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in departments %}
+              <tr>
+                <td><code class="text-white">{{ d.code }}</code></td>
+                <td>{{ d.name }}</td>
+                <td>{{ d.head.get_full_name|default:"Not Assigned" }}</td>
+                <td>{{ d.parent_department.name|default:"-" }}</td>
+                <td>
+                  <span class="badge {% if d.status == 'active' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 text-white">
+                    {{ d.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'department_edit' d.pk %}" class="btn btn-sm btn-outline-light"><i class="fa-regular fa-edit"></i> Edit</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">No departments configured yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Asset Categories Tab -->
+    <div class="tab-pane fade {% if active_tab == 'categories' %}show active{% endif %}" id="categories" role="tabpanel" aria-labelledby="categories-tab">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">Asset Categories</h5>
+        <a href="{% url 'category_create' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> Add Category</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Custom Attributes Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in categories %}
+              <tr>
+                <td class="text-white fw-bold">{{ c.name }}</td>
+                <td class="text-muted">{{ c.description|default:"No description" }}</td>
+                <td>
+                  <span class="badge bg-secondary rounded-pill">
+                    {{ c.fields_schema|length }} Attributes
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'category_edit' c.pk %}" class="btn btn-sm btn-outline-light"><i class="fa-regular fa-edit"></i> Edit</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No asset categories configured yet.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Employee Directory Tab -->
+    <div class="tab-pane fade {% if active_tab == 'employees' %}show active{% endif %}" id="employees" role="tabpanel" aria-labelledby="employees-tab">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="m-0">Employee Directory</h5>
+        <form method="GET" action="." class="d-flex gap-2" style="max-width: 320px;">
+          <input type="hidden" name="tab" value="employees">
+          <input type="text" name="search" class="form-control form-control-sm" placeholder="Search employee..." value="{{ search_query }}">
+          <button type="submit" class="btn btn-secondary btn-sm"><i class="fa-solid fa-search"></i></button>
+        </form>
+      </div>
+      
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in employees %}
+              <tr>
+                <td class="text-white">{{ e.get_full_name }}</td>
+                <td>{{ e.email }}</td>
+                <td>{{ e.department.name|default:"Unassigned" }}</td>
+                <td>
+                  <span class="badge bg-violet bg-opacity-25 text-white" style="background-color: rgba(111,66,193,0.15);">
+                    {{ e.get_role_display }}
+                  </span>
+                </td>
+                <td>
+                  <span class="badge {% if e.status == 'active' %}bg-success{% else %}bg-danger{% endif %} bg-opacity-25 text-white">
+                    {{ e.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  <a href="{% url 'employee_promote' e.pk %}" class="btn btn-sm btn-outline-info"><i class="fa-solid fa-user-gear"></i> Manage Role</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="6" class="text-center text-muted">No employees found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

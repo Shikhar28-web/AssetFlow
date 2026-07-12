@@ -1,0 +1,369 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard - AssetFlow{% endblock %}
+{% block page_header %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- KPI Card 1: Available Assets -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card available h-100">
+      <div class="text-muted text-uppercase small fw-bold">Available</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright">{{ assets_available }}</h2>
+        <i class="fa-solid fa-check-circle text-success fs-4"></i>
+      </div>
+    </div>
+  </div>
+  <!-- KPI Card 2: Allocated Assets -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card allocated h-100">
+      <div class="text-muted text-uppercase small fw-bold">Allocated</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright">{{ assets_allocated }}</h2>
+        <i class="fa-solid fa-user-tag text-info fs-4"></i>
+      </div>
+    </div>
+  </div>
+  <!-- KPI Card 3: Maintenance Today -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card maintenance h-100">
+      <div class="text-muted text-uppercase small fw-bold">Repairing</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright">{{ maintenance_today }}</h2>
+        <i class="fa-solid fa-screwdriver-wrench text-warning fs-4"></i>
+      </div>
+    </div>
+  </div>
+  <!-- KPI Card 4: Active Bookings -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card h-100" style="border-left: 4px solid var(--violet-primary);">
+      <div class="text-muted text-uppercase small fw-bold">Bookings</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright">{{ active_bookings }}</h2>
+        <i class="fa-solid fa-calendar-days text-violet fs-4" style="color: var(--violet-primary);"></i>
+      </div>
+    </div>
+  </div>
+  <!-- KPI Card 5: Pending Transfers -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card h-100" style="border-left: 4px solid #9b59b6;">
+      <div class="text-muted text-uppercase small fw-bold">Transfers</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright">{{ pending_transfers }}</h2>
+        <i class="fa-solid fa-arrows-left-right fs-4" style="color: #9b59b6;"></i>
+      </div>
+    </div>
+  </div>
+  <!-- KPI Card 6: Upcoming Returns -->
+  <div class="col-md-4 col-lg-2">
+    <div class="glass-card kpi-card overdue h-100">
+      <div class="text-muted text-uppercase small fw-bold">Overdue</div>
+      <div class="d-flex align-items-baseline justify-content-between mt-2">
+        <h2 class="m-0 text-bright text-danger">{{ overdue_allocations.count }}</h2>
+        <i class="fa-solid fa-triangle-exclamation text-danger fs-4"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions & Overdue Panel -->
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
+    <div class="glass-card h-100">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-bolt text-violet" style="color: var(--violet-primary);"></i> Quick Actions</h5>
+      <div class="d-flex flex-wrap gap-3">
+        {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+          <a href="{% url 'asset_register' %}" class="btn btn-primary"><i class="fa-solid fa-plus-circle me-1"></i> Register New Asset</a>
+          <a href="{% url 'allocate_asset' %}" class="btn btn-secondary"><i class="fa-solid fa-user-plus me-1"></i> Allocate Asset</a>
+          <a href="{% url 'audit_create' %}" class="btn btn-secondary"><i class="fa-solid fa-clipboard-list me-1"></i> Start Audit Cycle</a>
+        {% endif %}
+        <a href="{% url 'book_resource' %}" class="btn btn-secondary"><i class="fa-solid fa-calendar-plus me-1"></i> Book a Resource</a>
+        <a href="{% url 'raise_maintenance' %}" class="btn btn-secondary"><i class="fa-solid fa-triangle-exclamation me-1"></i> Request Repair</a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-lg-4">
+    <!-- Overdue Allocations Warnings -->
+    <div class="glass-card border-danger h-100 bg-danger bg-opacity-10">
+      <h5 class="text-danger mb-3"><i class="fa-solid fa-clock me-1"></i> Overdue Action Required</h5>
+      {% if overdue_allocations %}
+        <ul class="list-unstyled mb-0" style="max-height: 120px; overflow-y: auto;">
+          {% for oa in overdue_allocations %}
+            <li class="border-bottom border-secondary pb-2 mb-2">
+              <div class="d-flex justify-content-between">
+                <span class="text-bright fw-bold" style="font-size: 0.9rem;">{{ oa.asset.name }} [{{ oa.asset.asset_tag }}]</span>
+                <span class="text-danger fw-bold" style="font-size: 0.85rem;">{{ oa.expected_return_date|timesince }} ago</span>
+              </div>
+              <small class="text-muted">Held by: {{ oa.assignee.email }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted mb-0 small">No active allocations are currently overdue.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Main Section: Role-Based Content -->
+{% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+  <!-- Admin / Asset Manager Visual Analytics Dashboard -->
+  <div class="row g-4 mb-4">
+    <div class="col-lg-6">
+      <div class="glass-card">
+        <h5 class="text-bright mb-3">Asset Distribution</h5>
+        <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+          <canvas id="assetStatusChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="glass-card">
+        <h5 class="text-bright mb-3">Activity Breakdown</h5>
+        <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+          <canvas id="activitiesChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <!-- Recent Maintenance & Bookings -->
+      <div class="glass-card mb-4">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-list-check me-2 text-violet" style="color: var(--violet-primary);"></i> Recent Bookings</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Resource</th>
+                <th>Booked By</th>
+                <th>Time Slot</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for b in recent_bookings %}
+                <tr>
+                  <td class="text-white">{{ b.asset.name }}</td>
+                  <td>{{ b.booked_by.email }}</td>
+                  <td>{{ b.start_time|date:"M d, H:i" }} - {{ b.end_time|date:"H:i" }}</td>
+                  <td>
+                    <span class="badge rounded-pill bg-opacity-20 {% if b.status == 'upcoming' %}bg-primary text-primary{% elif b.status == 'ongoing' %}bg-success text-success{% else %}bg-secondary text-secondary{% endif %}" style="font-size: 0.75rem;">
+                      {{ b.get_status_display }}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">No recent bookings.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-screwdriver-wrench me-2 text-warning"></i> Recent Repairs</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Priority</th>
+                <th>Reported By</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for rm in recent_maintenance %}
+                <tr>
+                  <td><a href="{% url 'maintenance_detail' rm.id %}" class="text-decoration-none text-white">{{ rm.asset.name }} [{{ rm.asset.asset_tag }}]</a></td>
+                  <td>
+                    <span class="badge {% if rm.priority == 'critical' or rm.priority == 'high' %}bg-danger{% elif rm.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white" style="font-size: 0.7rem;">
+                      {{ rm.get_priority_display }}
+                    </span>
+                  </td>
+                  <td>{{ rm.raised_by.email }}</td>
+                  <td>
+                    <span class="badge bg-opacity-20 {% if rm.status == 'resolved' %}bg-success text-success{% elif rm.status == 'pending' %}bg-warning text-warning{% else %}bg-info text-info{% endif %}" style="font-size: 0.75rem;">
+                      {{ rm.get_status_display }}
+                    </span>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted">No repair history.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <!-- Admin Action Logs -->
+      <div class="glass-card h-100">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-clock-rotate-left me-2 text-muted"></i> System Activity Logs</h5>
+        <ul class="list-unstyled mb-0" style="max-height: 520px; overflow-y: auto;">
+          {% for log in recent_logs %}
+            <li class="border-bottom border-secondary pb-2 mb-3">
+              <div class="d-flex justify-content-between mb-1">
+                <span class="text-white fw-bold" style="font-size: 0.85rem;">{{ log.action }}</span>
+                <small class="text-muted">{{ log.timestamp|date:"H:i" }}</small>
+              </div>
+              <small class="text-muted d-block" style="font-size: 0.8rem;">{{ log.details }}</small>
+              <small class="text-violet d-block mt-1" style="font-size: 0.75rem; color: var(--violet-primary);">By: {{ log.user.email|default:"System" }}</small>
+            </li>
+          {% empty %}
+            <li class="text-muted text-center py-4">No recent activity logs.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+{% else %}
+  <!-- Employee / User Personal Panel -->
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="glass-card h-100">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-user-tag me-2 text-info"></i> My Allocated Assets</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Tag</th>
+                <th>Condition</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ma in my_allocations %}
+                <tr>
+                  <td class="text-white">{{ ma.asset.name }}</td>
+                  <td><code class="text-light">{{ ma.asset.asset_tag }}</code></td>
+                  <td>
+                    <span class="badge rounded-pill bg-opacity-25 bg-secondary text-white" style="font-size: 0.75rem;">
+                      {{ ma.asset.get_condition_display }}
+                    </span>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <a href="{% url 'raise_maintenance_specific' ma.asset.id %}" class="btn btn-warning btn-sm py-1 px-2" style="font-size: 0.75rem;"><i class="fa-solid fa-screwdriver-wrench"></i> Repair</a>
+                      <a href="{% url 'raise_transfer_request' ma.asset.id %}" class="btn btn-info btn-sm py-1 px-2" style="font-size: 0.75rem;"><i class="fa-solid fa-arrows-split-up-and-left"></i> Transfer</a>
+                    </div>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-4">You currently hold no allocated assets.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="glass-card h-100">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-calendar-check me-2 text-violet" style="color: var(--violet-primary);"></i> My Active Bookings</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for mb in my_bookings %}
+                <tr>
+                  <td class="text-white">{{ mb.asset.name }}</td>
+                  <td>{{ mb.start_time|date:"M d, H:i" }}</td>
+                  <td>{{ mb.end_time|date:"M d, H:i" }}</td>
+                  <td>
+                    <a href="{% url 'cancel_booking' mb.id %}" class="btn btn-danger btn-sm py-1 px-2" onclick="return confirm('Cancel this booking?');" style="font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cancel</a>
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-4">You have no upcoming or ongoing bookings.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // 1. Doughnut Chart for Asset Status Breakdown
+  const ctxStatus = document.getElementById('assetStatusChart').getContext('2d');
+  new Chart(ctxStatus, {
+    type: 'doughnut',
+    data: {
+      labels: ['Available', 'Allocated', 'Repairing'],
+      datasets: [{
+        data: [{{ assets_available }}, {{ assets_allocated }}, {{ maintenance_today }}],
+        backgroundColor: ['#2ecc71', '#3498db', '#f39c12'],
+        borderColor: '#1f2833',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#c5c6c7', font: { family: 'Inter', size: 12 } }
+        }
+      }
+    }
+  });
+
+  // 2. Bar Chart for Bookings & Repair Metrics
+  const ctxActivities = document.getElementById('activitiesChart').getContext('2d');
+  new Chart(ctxActivities, {
+    type: 'bar',
+    data: {
+      labels: ['Bookings', 'Repairs', 'Transfers'],
+      datasets: [{
+        label: 'Active System Records',
+        data: [{{ active_bookings }}, {{ maintenance_today }}, {{ pending_transfers }}],
+        backgroundColor: ['#6f42c1', '#f39c12', '#9b59b6'],
+        borderColor: 'transparent',
+        borderWidth: 0,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#c5c6c7' } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#c5c6c7', stepSize: 1 } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+</script>
+{% endif %}
+{% endblock %}

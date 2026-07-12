@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - AssetFlow{% endblock %}
+{% block page_header %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-7">
+    <div class="glass-card mb-4">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-tags me-2"></i> Category Details</h5>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_name" class="form-label">Category Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="id_description" class="form-label">Description</label>
+          {{ form.description }}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_schema_text" class="form-label">Custom Fields Schema (JSON Array)</label>
+          {{ form.schema_text }}
+          {% if form.schema_text.errors %}
+            <div class="text-danger small mt-1">{{ form.schema_text.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'organization_setup' %}?tab=categories" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-md-5">
+    <div class="glass-card bg-opacity-25" style="background-color: rgba(111,66,193,0.03); border-color: rgba(111,66,193,0.2);">
+      <h5 class="text-violet mb-3" style="color: var(--violet-primary);"><i class="fa-solid fa-circle-info"></i> How Schema Works</h5>
+      <p class="small text-white">Categories can capture optional, category-specific fields dynamically during Asset registration (e.g. warranty period for Electronics, mileage for Vehicles).</p>
+      <p class="small text-white">Define these attributes as a valid JSON list/array of objects containing <code>name</code> and <code>type</code>.</p>
+      <div class="mb-3">
+        <label class="form-label text-muted small">Supported Types</label>
+        <div class="d-flex flex-wrap gap-2">
+          <span class="badge bg-secondary">text</span>
+          <span class="badge bg-secondary">number</span>
+          <span class="badge bg-secondary">date</span>
+        </div>
+      </div>
+      <label class="form-label text-muted small">Example Configuration</label>
+      <pre class="p-3 bg-dark text-violet rounded border border-secondary small" style="color: #a78bfa;"><code style="font-family: monospace;">[
+  {
+    "name": "Warranty Period (months)",
+    "type": "number"
+  },
+  {
+    "name": "Manufacturer",
+    "type": "text"
+  },
+  {
+    "name": "Expiration Date",
+    "type": "date"
+  }
+]</code></pre>
+    </div>
+  </div>
+</div>
+{% endblock %}

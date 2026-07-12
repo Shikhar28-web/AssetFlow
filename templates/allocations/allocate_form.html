@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Allocate Asset - AssetFlow{% endblock %}
+{% block page_header %}Allocate Asset{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6 mx-auto">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-user-plus me-2"></i> Asset Allocation Setup</h5>
+      
+      {% if asset %}
+        <div class="mb-4 p-3 bg-dark rounded border border-secondary">
+          <label class="form-label text-muted small d-block mb-1">Target Asset</label>
+          <span class="text-white fw-bold fs-5">{{ asset.name }}</span>
+          <code class="text-violet d-block mt-1" style="color: #a78bfa;">Tag: {{ asset.asset_tag }}</code>
+        </div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3 {% if asset %}d-none{% endif %}">
+          <label for="id_asset" class="form-label">Asset to Allocate</label>
+          {{ form.asset }}
+          {% if form.asset.errors %}
+            <div class="text-danger small mt-1">{{ form.asset.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="id_assignee" class="form-label">Allocate to Employee</label>
+          {{ form.assignee }}
+          <div class="form-text text-muted">Select an employee directory user.</div>
+          {% if form.assignee.errors %}
+            <div class="text-danger small mt-1">{{ form.assignee.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3 text-center">
+          <span class="text-muted small fw-bold">OR</span>
+        </div>
+
+        <div class="mb-3">
+          <label for="id_department" class="form-label">Allocate to Department</label>
+          {{ form.department }}
+          <div class="form-text text-muted">Select a department if allocating to a group location instead of an individual.</div>
+          {% if form.department.errors %}
+            <div class="text-danger small mt-1">{{ form.department.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_expected_return_date" class="form-label">Expected Return Date (optional)</label>
+          {{ form.expected_return_date }}
+          {% if form.expected_return_date.errors %}
+            <div class="text-danger small mt-1">{{ form.expected_return_date.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger bg-danger bg-opacity-10 border-danger text-light mb-3">
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end">
+          {% if asset %}
+            <a href="{% url 'asset_detail' asset.pk %}" class="btn btn-secondary">Cancel</a>
+          {% else %}
+            <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+          {% endif %}
+          <button type="submit" class="btn btn-primary">Confirm Allocation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

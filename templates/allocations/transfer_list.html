@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Asset Transfer Desk - AssetFlow{% endblock %}
+{% block page_header %}Asset Transfer Desk{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="m-0">Asset Transfer Requests</h5>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Asset</th>
+          <th>Tag</th>
+          <th>From (Current Holder)</th>
+          <th>To (Target Holder)</th>
+          <th>Requested By</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transfers %}
+          <tr>
+            <td class="text-white fw-bold">{{ t.asset.name }}</td>
+            <td><code class="text-violet" style="color: #a78bfa;">{{ t.asset.asset_tag }}</code></td>
+            <td>{{ t.current_holder.email }}</td>
+            <td>{{ t.target_holder.email }}</td>
+            <td>{{ t.requested_by.email }}</td>
+            <td>{{ t.requested_at|date:"Y-m-d" }}</td>
+            <td>
+              <span class="badge rounded-pill bg-opacity-25 {% if t.status == 'approved' %}bg-success text-success{% elif t.status == 'pending' %}bg-warning text-warning{% else %}bg-danger text-danger{% endif %}" style="font-size: 0.75rem;">
+                {{ t.get_status_display }}
+              </span>
+            </td>
+            <td>
+              {% if t.status == 'pending' %}
+                {% if request.user.role in 'admin,asset_manager' or request.user.is_staff or request.user.role == 'department_head' and t.current_holder.department == request.user.department %}
+                  <div class="d-flex gap-2">
+                    <a href="{% url 'approve_transfer' t.pk %}" class="btn btn-sm btn-success py-1 px-2" style="font-size: 0.75rem;"><i class="fa-solid fa-check"></i> Approve</a>
+                    <a href="{% url 'reject_transfer' t.pk %}" class="btn btn-sm btn-danger py-1 px-2" style="font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Reject</a>
+                  </div>
+                {% else %}
+                  <span class="text-muted small">Pending Approval</span>
+                {% endif %}
+              {% else %}
+                <span class="text-muted small">Completed by {{ t.approved_by.email|default:"System" }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No transfer requests logged in the system.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

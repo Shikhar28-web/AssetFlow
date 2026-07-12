@@ -15,6 +15,9 @@ class ResourceBooking(models.Model):
     end_time = models.DateTimeField()
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='upcoming')
     created_at = models.DateTimeField(auto_now_add=True)
+    google_sync_enabled = models.BooleanField(default=False)
+    outlook_sync_enabled = models.BooleanField(default=False)
+
 
     def __str__(self):
         return f"{self.asset} booked by {self.booked_by} on {self.start_time.strftime('%Y-%m-%d %H:%M')}"

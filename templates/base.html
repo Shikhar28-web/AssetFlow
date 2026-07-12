@@ -33,8 +33,13 @@
           </a>
         </li>
         <li>
-          <a href="{% url 'asset_list' %}" class="sidebar-link {% if 'asset' in request.path and 'reports' not in request.path %}active{% endif %}">
+          <a href="{% url 'asset_list' %}" class="sidebar-link {% if 'asset' in request.path and 'reports' not in request.path and 'qr-lookup' not in request.path %}active{% endif %}">
             <i class="fa-solid fa-boxes-stacked"></i> Assets
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'qr_lookup' %}" class="sidebar-link {% if 'qr-lookup' in request.path %}active{% endif %}">
+            <i class="fa-solid fa-qrcode"></i> QR Scanner
           </a>
         </li>
         <li>
@@ -153,8 +158,41 @@
     </main>
   </div>
 
+  <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer" style="z-index: 1055;"></div>
+
   <!-- Bootstrap 5 JavaScript Bundle with Popper -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      
+      const toastId = 'toast_' + Date.now();
+      const toastColorClass = type === 'success' ? 'success-green' : (type === 'danger' || type === 'error' ? 'danger-red' : 'info-blue');
+      const iconClass = type === 'success' ? 'fa-circle-check text-success' : 'fa-circle-exclamation text-danger';
+      
+      const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: var(--bg-card) !important; border: 1px solid var(--border-color) !important; border-left: 4px solid var(--${toastColorClass}) !important;">
+          <div class="d-flex">
+            <div class="toast-body d-flex align-items-center gap-2">
+              <i class="fa-solid ${iconClass} fs-5"></i>
+              <span>${message}</span>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+          </div>
+        </div>
+      `;
+      container.insertAdjacentHTML('beforeend', toastHtml);
+      
+      const toastEl = document.getElementById(toastId);
+      const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+      bsToast.show();
+      
+      toastEl.addEventListener('hidden.bs.toast', () => {
+        toastEl.remove();
+      });
+    }
+  </script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

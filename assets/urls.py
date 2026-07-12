@@ -7,4 +7,5 @@ urlpatterns = [
     path('edit/<int:pk>/', views.asset_edit, name='asset_edit'),
     path('<int:pk>/', views.asset_detail, name='asset_detail'),
     path('reports/', views.reports_view, name='reports_view'),
+    path('qr-lookup/', views.qr_lookup, name='qr_lookup'),
 ]

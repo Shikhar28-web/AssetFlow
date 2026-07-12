@@ -183,3 +183,18 @@ def reports_view(request):
     }
     return render(request, 'assets/reports.html', context)
 
+
+@login_required
+def qr_lookup(request):
+    tag = request.GET.get('tag', '').strip()
+    if tag:
+        try:
+            asset = Asset.objects.get(asset_tag__iexact=tag)
+            return redirect('asset_detail', pk=asset.pk)
+        except Asset.DoesNotExist:
+            messages.error(request, f"No asset found with tag '{tag}'.")
+            return redirect('qr_lookup')
+            
+    return render(request, 'assets/qr_lookup.html')
+
+

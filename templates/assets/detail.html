@@ -27,6 +27,20 @@
         </div>
       {% endif %}
 
+      <!-- Asset QR Code Tag -->
+      <div class="mb-4 text-center border border-secondary rounded p-3 bg-dark">
+        <h6 class="text-muted text-uppercase small fw-bold mb-2">Asset QR Tag</h6>
+        <div class="d-inline-block bg-white p-2 rounded mb-2">
+          <img id="qrCodeImg" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ asset.asset_tag }}" alt="QR Code for {{ asset.asset_tag }}" style="width: 150px; height: 150px;">
+        </div>
+        <div class="mt-1">
+          <code class="text-bright font-monospace d-block mb-2" style="font-size: 0.95rem;">{{ asset.asset_tag }}</code>
+          <a href="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data={{ asset.asset_tag }}" target="_blank" class="btn btn-sm btn-outline-info">
+            <i class="fa-solid fa-download me-1"></i> View Large QR
+          </a>
+        </div>
+      </div>
+
       <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Specifications</h5>
       <dl class="row text-white mb-4">
         <dt class="col-sm-5 text-muted fw-normal">Serial Number</dt>

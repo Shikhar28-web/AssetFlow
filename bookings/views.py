@@ -2,8 +2,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from .models import ResourceBooking
 from .forms import ResourceBookingForm
 from assets.models import Asset
@@ -145,3 +146,75 @@ def booking_calendar_api(request, asset_pk):
         })
         
     return JsonResponse(events, safe=False)
+
+
+@login_required
+def download_booking_ics(request, pk):
+    booking = get_object_or_404(ResourceBooking, pk=pk)
+    
+    # We want standard RFC 5545 format.
+    # Start and end times should be in UTC or format with Z.
+    start_str = booking.start_time.strftime('%Y%m%dT%H%M%SZ')
+    end_str = booking.end_time.strftime('%Y%m%dT%H%M%SZ')
+    stamp_str = timezone.now().strftime('%Y%m%dT%H%M%SZ')
+    
+    summary = f"Booking: {booking.asset.name}"
+    description = f"Resource reservation for {booking.asset.name} (Tag: {booking.asset.asset_tag}).\\nStatus: {booking.get_status_display()}"
+    location = booking.asset.location or "Office"
+    
+    ics_lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//AssetFlow//Booking Sync//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "BEGIN:VEVENT",
+        f"UID:booking-{booking.id}@assetflow.com",
+        f"DTSTAMP:{stamp_str}",
+        f"DTSTART:{start_str}",
+        f"DTEND:{end_str}",
+        f"SUMMARY:{summary}",
+        f"DESCRIPTION:{description}",
+        f"LOCATION:{location}",
+        "END:VEVENT",
+        "END:VCALENDAR"
+    ]
+    ics_content = "\r\n".join(ics_lines)
+    
+    response = HttpResponse(ics_content, content_type='text/calendar')
+    response['Content-Disposition'] = f'attachment; filename="booking-{booking.id}.ics"'
+    return response
+
+
+@login_required
+@require_POST
+def booking_sync_mock_api(request, pk):
+    booking = get_object_or_404(ResourceBooking, pk=pk)
+    provider = request.POST.get('provider') # 'google' or 'outlook'
+    
+    if provider == 'google':
+        booking.google_sync_enabled = not booking.google_sync_enabled
+        booking.save()
+        status_enabled = booking.google_sync_enabled
+        action_name = "Google Calendar Auto-Sync"
+    elif provider == 'outlook':
+        booking.outlook_sync_enabled = not booking.outlook_sync_enabled
+        booking.save()
+        status_enabled = booking.outlook_sync_enabled
+        action_name = "Outlook Calendar Auto-Sync"
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid calendar provider'}, status=400)
+    
+    # Create action log
+    ActionLog.objects.create(
+        user=request.user,
+        action="Calendar Sync Toggle",
+        details=f"Toggled {action_name} to {'enabled' if status_enabled else 'disabled'} for booking {booking.id} ({booking.asset.name})"
+    )
+    
+    return JsonResponse({
+        'status': 'success',
+        'enabled': status_enabled,
+        'message': f"Successfully {'enabled' if status_enabled else 'disabled'} {action_name} for '{booking.asset.name}'."
+    })
+

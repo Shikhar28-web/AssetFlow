@@ -79,6 +79,7 @@
         {% endif %}
         <a href="{% url 'book_resource' %}" class="btn btn-secondary"><i class="fa-solid fa-calendar-plus me-1"></i> Book a Resource</a>
         <a href="{% url 'raise_maintenance' %}" class="btn btn-secondary"><i class="fa-solid fa-triangle-exclamation me-1"></i> Request Repair</a>
+        <a href="{% url 'qr_lookup' %}" class="btn btn-secondary"><i class="fa-solid fa-qrcode me-1"></i> Scan QR / Barcode</a>
       </div>
     </div>
   </div>
@@ -290,7 +291,44 @@
                   <td>{{ mb.start_time|date:"M d, H:i" }}</td>
                   <td>{{ mb.end_time|date:"M d, H:i" }}</td>
                   <td>
-                    <a href="{% url 'cancel_booking' mb.id %}" class="btn btn-danger btn-sm py-1 px-2" onclick="return confirm('Cancel this booking?');" style="font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cancel</a>
+                    <div class="d-flex gap-2">
+                      <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-info py-1 px-2 dropdown-toggle" style="font-size: 0.75rem;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                          <i class="fa-solid fa-sync"></i> Sync
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark bg-card border-secondary shadow-lg">
+                          <li>
+                            <a class="dropdown-item" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text=Booking:+{{ mb.asset.name|urlencode }}&dates={{ mb.start_time|date:'Ymd\THis\Z' }}/{{ mb.end_time|date:'Ymd\THis\Z' }}&details=AssetFlow+Booking+for+{{ mb.asset.name|urlencode }}+[Tag:+{{ mb.asset.asset_tag|urlencode }}]&location={{ mb.asset.location|urlencode }}" target="_blank">
+                              <i class="fa-brands fa-google me-2 text-danger"></i> Google Calendar
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="https://outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject=Booking:+{{ mb.asset.name|urlencode }}&startdt={{ mb.start_time|date:'Y-m-d\TH:i:s\Z' }}&enddt={{ mb.end_time|date:'Y-m-d\TH:i:s\Z' }}&body=AssetFlow+Booking+for+{{ mb.asset.name|urlencode }}+[Tag:+{{ mb.asset.asset_tag|urlencode }}]&location={{ mb.asset.location|urlencode }}" target="_blank">
+                              <i class="fa-brands fa-windows me-2 text-primary"></i> Outlook Calendar
+                            </a>
+                          </li>
+                          <li>
+                            <a class="dropdown-item" href="{% url 'download_booking_ics' mb.pk %}">
+                              <i class="fa-solid fa-file-export me-2 text-success"></i> Download iCal (.ics)
+                            </a>
+                          </li>
+                          <li><hr class="dropdown-divider border-secondary"></li>
+                          <li>
+                            <button class="dropdown-item mock-sync-btn" data-booking-id="{{ mb.pk }}" data-provider="google">
+                              <i class="fa-solid fa-circle-check me-2 {% if mb.google_sync_enabled %}text-success{% else %}text-muted{% endif %}"></i>
+                              <span>Auto-Sync Google ({% if mb.google_sync_enabled %}Enabled{% else %}Disabled{% endif %})</span>
+                            </button>
+                          </li>
+                          <li>
+                            <button class="dropdown-item mock-sync-btn" data-booking-id="{{ mb.pk }}" data-provider="outlook">
+                              <i class="fa-solid fa-circle-check me-2 {% if mb.outlook_sync_enabled %}text-success{% else %}text-muted{% endif %}"></i>
+                              <span>Auto-Sync Outlook ({% if mb.outlook_sync_enabled %}Enabled{% else %}Disabled{% endif %})</span>
+                            </button>
+                          </li>
+                        </ul>
+                      </div>
+                      <a href="{% url 'cancel_booking' mb.id %}" class="btn btn-danger btn-sm py-1 px-2" onclick="return confirm('Cancel this booking?');" style="font-size: 0.75rem;"><i class="fa-solid fa-xmark"></i> Cancel</a>
+                    </div>
                   </td>
                 </tr>
               {% empty %}
@@ -366,4 +404,74 @@
   });
 </script>
 {% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    document.querySelectorAll('.mock-sync-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const bookingId = this.dataset.bookingId;
+        const provider = this.dataset.provider;
+        const btnText = this.querySelector('span');
+        const icon = this.querySelector('i');
+        
+        const originalText = btnText.textContent;
+        const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+        
+        btnText.textContent = "Syncing...";
+        icon.className = "fa-solid fa-spinner fa-spin text-warning me-2";
+        
+        const formData = new FormData();
+        formData.append('provider', provider);
+        
+        fetch(`/bookings/api/sync-mock/${bookingId}/`, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === 'success') {
+            if (data.enabled) {
+              btnText.textContent = `Auto-Sync ${providerName} (Enabled)`;
+              icon.className = "fa-solid fa-circle-check text-success me-2";
+            } else {
+              btnText.textContent = `Auto-Sync ${providerName} (Disabled)`;
+              icon.className = "fa-solid fa-circle-check text-muted me-2";
+            }
+            showToast(data.message, 'success');
+          } else {
+            btnText.textContent = originalText;
+            icon.className = "fa-solid fa-circle-check text-muted me-2";
+            showToast(data.message || 'Sync failed', 'danger');
+          }
+        })
+        .catch(err => {
+          btnText.textContent = originalText;
+          icon.className = "fa-solid fa-circle-check text-muted me-2";
+          showToast('Network error during sync', 'danger');
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}

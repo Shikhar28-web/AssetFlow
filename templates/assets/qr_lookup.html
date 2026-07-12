@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}QR Scanner & Lookup - AssetFlow{% endblock %}
+{% block page_header %}QR Scanner & Lookup{% endblock %}
+
+{% block extra_head %}
+<!-- html5-qrcode CDN -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<style>
+  #reader {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 12px;
+    overflow: hidden;
+    background-color: #121620;
+  }
+  #reader__dashboard_section_csr button, #reader__dashboard_section_swaplink {
+    background-color: var(--violet-primary) !important;
+    border: none !important;
+    color: white !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 6px !important;
+    font-size: 0.85rem !important;
+    margin: 5px !important;
+  }
+  #reader__dashboard_section_csr button:hover {
+    background-color: var(--violet-hover) !important;
+  }
+  #reader__status_span {
+    color: var(--text-primary) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+  <!-- Manual Code Entry / Scanner trigger -->
+  <div class="col-lg-5">
+    <div class="glass-card mb-4">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-qrcode text-violet me-2"></i> Scan or Enter Asset Tag</h5>
+      <p class="text-muted small">Point your device camera at an asset QR code tag, or scan it using a hardware barcode reader/type it manually below.</p>
+      
+      <form method="GET" action="{% url 'qr_lookup' %}" class="mt-4">
+        <div class="mb-3">
+          <label for="tagInput" class="form-label">Asset Tag / Code</label>
+          <div class="input-group">
+            <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-solid fa-barcode"></i></span>
+            <input type="text" name="tag" id="tagInput" class="form-control" placeholder="e.g. AF-0001" autofocus required>
+          </div>
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-search me-2"></i> Lookup Asset</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="glass-card">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-circle-info text-info me-2"></i> Hardware Scanner Info</h5>
+      <p class="text-muted small mb-0">
+        AssetFlow is compatible with any USB/Bluetooth hardware barcode scanner configured in <strong>Keyboard Emulation (HID)</strong> mode. 
+        Simply place your cursor inside the text box above and scan. The scanner will automatically paste the tag and submit the form.
+      </p>
+    </div>
+  </div>
+
+  <!-- Camera Scanner Panel -->
+  <div class="col-lg-7">
+    <div class="glass-card text-center">
+      <h5 class="text-white mb-3 text-start"><i class="fa-solid fa-camera text-success me-2"></i> Live Camera QR Scanner</h5>
+      <p class="text-muted text-start small mb-4">Click "Start Scanning" below to request camera permission and scan QR codes in real-time.</p>
+      
+      <div class="p-3 border border-secondary rounded bg-dark mb-4 d-flex justify-content-center align-items-center" style="min-height: 320px;">
+        <div id="reader"></div>
+      </div>
+      
+      <div id="scanned-result" class="alert alert-success d-none" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i> Scanned successfully! Redirecting...
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    let html5QrcodeScanner = null;
+
+    function onScanSuccess(decodedText, decodedResult) {
+      console.log(`Code matched = ${decodedText}`, decodedResult);
+      
+      // Stop scanner
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().catch(err => console.error("Failed to clear scanner", err));
+      }
+      
+      // Show success indicator
+      const resultAlert = document.getElementById('scanned-result');
+      if (resultAlert) {
+        resultAlert.classList.remove('d-none');
+        resultAlert.textContent = `Scanned Tag: ${decodedText}. Redirecting...`;
+      }
+      
+      // Redirect to the QR lookup view
+      setTimeout(() => {
+        window.location.href = `{% url 'qr_lookup' %}?tag=${encodeURIComponent(decodedText.trim ? decodedText.trim() : decodedText)}`;
+      }, 1000);
+    }
+
+    function onScanFailure(error) {
+      // Quietly log scanner failures as they happen continuously
+    }
+
+    // Initialize html5-qrcode
+    html5QrcodeScanner = new Html5QrcodeScanner(
+      "reader", 
+      { fps: 10, qrbox: {width: 250, height: 250} },
+      /* verbose= */ false
+    );
+    html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - AssetFlow{% endblock %}
+{% block page_header %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6 mx-auto">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-building me-2"></i> Department Information</h5>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_name" class="form-label">Department Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+          {% endif %}
+        </div>
+        
+        <div class="mb-3">
+          <label for="id_code" class="form-label">Department Code (unique)</label>
+          {{ form.code }}
+          {% if form.code.errors %}
+            <div class="text-danger small mt-1">{{ form.code.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="id_head" class="form-label">Department Head</label>
+          {{ form.head }}
+          <div class="form-text text-muted">Select an active employee to lead this department.</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="id_parent_department" class="form-label">Parent Department (optional)</label>
+          {{ form.parent_department }}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_status" class="form-label">Status</label>
+          {{ form.status }}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'organization_setup' %}?tab=departments" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - AssetFlow{% endblock %}
+{% block page_header %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6 mx-auto">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-clipboard-list me-2"></i> Audit Cycle Configuration</h5>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_name" class="form-label">Audit Cycle Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label for="id_department" class="form-label">Department Scope (optional)</label>
+            {{ form.department }}
+            <div class="form-text text-muted">Leave empty to audit all.</div>
+          </div>
+          <div class="col-md-6">
+            <label for="id_location" class="form-label">Location Scope (optional)</label>
+            {{ form.location }}
+            <div class="form-text text-muted">Keyword filter (e.g. Floor 2)</div>
+          </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label for="id_start_date" class="form-label">Start Date</label>
+            {{ form.start_date }}
+            {% if form.start_date.errors %}
+              <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label for="id_end_date" class="form-label">End Date</label>
+            {{ form.end_date }}
+            {% if form.end_date.errors %}
+              <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label for="id_auditors" class="form-label">Assign Auditors</label>
+          {{ form.auditors }}
+          <div class="form-text text-muted">Select one or more active employees to perform verification. Hold Ctrl to select multiple.</div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'audit_list' %}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Initialize Audit Cycle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

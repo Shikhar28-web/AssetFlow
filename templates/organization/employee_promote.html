@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Manage Employee - AssetFlow{% endblock %}
+{% block page_header %}Manage Employee: {{ employee.email }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6 mx-auto">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-user-gear me-2"></i> Employee Roles & Settings</h5>
+      
+      <div class="d-flex align-items-center gap-3 mb-4 p-3 bg-dark rounded border border-secondary">
+        <div class="bg-violet rounded-circle d-flex align-items-center justify-content-center text-white" style="width: 48px; height: 48px; background-color: var(--violet-primary);">
+          <i class="fa-regular fa-user fs-4"></i>
+        </div>
+        <div>
+          <h6 class="m-0 text-white">{{ employee.get_full_name|default:"Unregistered Name" }}</h6>
+          <small class="text-muted d-block">{{ employee.email }}</small>
+        </div>
+      </div>
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label for="id_role" class="form-label">System Role</label>
+          {{ form.role }}
+          <div class="form-text text-muted">Employee (default), Department Head (manages dept transfers), Asset Manager (full CRUD operations), Admin (full settings access).</div>
+        </div>
+
+        <div class="mb-3">
+          <label for="id_department" class="form-label">Assigned Department</label>
+          {{ form.department }}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_status" class="form-label">Account Status</label>
+          {{ form.status }}
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'organization_setup' %}?tab=employees" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

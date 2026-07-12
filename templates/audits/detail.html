@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Audit: {{ cycle.name }} - AssetFlow{% endblock %}
+{% block page_header %}Audit Cycle: {{ cycle.name }}{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- Progress & Close Card -->
+  <div class="col-lg-6">
+    <div class="glass-card h-100 d-flex flex-column justify-content-between">
+      <div>
+        <div class="d-flex justify-content-between align-items-start">
+          <h5 class="text-white mb-1">Cycle Completion</h5>
+          <span class="badge {% if cycle.status == 'closed' %}bg-secondary{% else %}bg-success{% endif %} bg-opacity-25 text-white">
+            {{ cycle.get_status_display }}
+          </span>
+        </div>
+        <p class="text-muted small">Verification status of all assets in scope (Dept: {{ cycle.department.name|default:"All" }}, Location: {{ cycle.location|default:"All" }}).</p>
+        
+        <div class="d-flex align-items-center gap-3 mt-4">
+          <div class="progress bg-dark flex-grow-1" style="height: 14px; border-radius: 20px;">
+            <div class="progress-bar" role="progressbar" style="width: {{ percent_complete }}%; background-color: var(--violet-primary);" aria-valuenow="{{ percent_complete }}" aria-valuemin="0" aria-valuemax="100"></div>
+          </div>
+          <span class="fw-bold text-white fs-5">{{ percent_complete }}%</span>
+        </div>
+        <div class="text-muted small mt-2">Reconciled: {{ completed }} / {{ total }} assets.</div>
+      </div>
+      
+      {% if cycle.status == 'active' and request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+        <div class="pt-4 border-top border-secondary mt-3">
+          {% if percent_complete == 100 %}
+            <a href="{% url 'audit_close' cycle.id %}" class="btn btn-primary w-100" onclick="return confirm('Closing this cycle will lock all verification records and update missing assets to Lost status. Proceed?');"><i class="fa-solid fa-lock me-1"></i> Close & Reconcile Audit Cycle</a>
+          {% else %}
+            <button class="btn btn-secondary w-100" disabled><i class="fa-solid fa-lock me-1"></i> Close & Reconcile (Awaiting Verification)</button>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Discrepancy Reports -->
+  <div class="col-lg-6">
+    <div class="glass-card border-danger bg-danger bg-opacity-10 h-100">
+      <h5 class="text-danger mb-3"><i class="fa-solid fa-triangle-exclamation me-1"></i> Discrepancy Report</h5>
+      {% if discrepancy_items %}
+        <ul class="list-unstyled mb-0" style="max-height: 180px; overflow-y: auto;">
+          {% for item in discrepancy_items %}
+            <li class="border-bottom border-secondary pb-2 mb-2">
+              <div class="d-flex justify-content-between">
+                <span class="text-white fw-bold" style="font-size: 0.9rem;">{{ item.asset.name }} [{{ item.asset.asset_tag }}]</span>
+                <span class="badge {% if item.status == 'missing' %}bg-danger{% else %}bg-warning{% endif %} bg-opacity-20 text-white text-capitalize" style="font-size: 0.75rem;">{{ item.get_status_display }}</span>
+              </div>
+              <small class="text-muted d-block mt-1">Audit Notes: {{ item.notes|default:"No notes left" }}</small>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="text-muted mb-0 small">No discrepancy flags registered in this cycle.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="glass-card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="m-0 text-white">Assets In Scope</h5>
+    <form method="GET" class="d-flex gap-2" style="max-width: 240px;">
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit();">
+        <option value="">All Verification Statuses</option>
+        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+        <option value="verified" {% if status_filter == 'verified' %}selected{% endif %}>Verified</option>
+        <option value="missing" {% if status_filter == 'missing' %}selected{% endif %}>Missing</option>
+        <option value="damaged" {% if status_filter == 'damaged' %}selected{% endif %}>Damaged</option>
+      </select>
+    </form>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Asset Tag</th>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Verification Status</th>
+          <th>Notes</th>
+          <th>Auditor</th>
+          <th>Verification Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td><code class="text-violet" style="color: #a78bfa;">{{ item.asset.asset_tag }}</code></td>
+            <td class="text-white fw-bold">{{ item.asset.name }}</td>
+            <td>{{ item.asset.location|default:"-" }}</td>
+            <td>
+              <span class="badge bg-opacity-25 {% if item.status == 'verified' %}bg-success text-success{% elif item.status == 'pending' %}bg-warning text-warning{% else %}bg-danger text-danger{% endif %}">
+                {{ item.get_status_display }}
+              </span>
+            </td>
+            <td class="small">{{ item.notes|default:"-" }}</td>
+            <td class="small">{{ item.verified_by.email|default:"-" }}</td>
+            <td>
+              {% if cycle.status == 'active' %}
+                <form method="POST" action="{% url 'audit_item_verify' cycle.id item.id %}" class="d-flex gap-1 align-items-center">
+                  {% csrf_token %}
+                  <select name="status" class="form-select form-select-sm py-0 px-2" style="font-size: 0.8rem; width: 110px;" required>
+                    <option value="">Verify...</option>
+                    <option value="verified">Verified</option>
+                    <option value="missing">Missing</option>
+                    <option value="damaged">Damaged</option>
+                  </select>
+                  <input type="text" name="notes" class="form-control form-control-sm py-0 px-2" style="font-size: 0.8rem; max-width: 140px;" placeholder="Notes...">
+                  <button type="submit" class="btn btn-primary btn-sm py-0 px-2" style="font-size: 0.8rem;"><i class="fa-solid fa-check"></i></button>
+                </form>
+              {% else %}
+                <span class="text-muted small">Locked</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">No assets in scope.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

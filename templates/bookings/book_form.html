@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Book Resource - AssetFlow{% endblock %}
+{% block page_header %}Book Resource{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 col-lg-6 mx-auto">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-calendar-plus me-2"></i> Resource Reservation Setup</h5>
+      
+      {% if asset %}
+        <div class="mb-4 p-3 bg-dark rounded border border-secondary">
+          <label class="form-label text-muted small d-block mb-1">Target Resource</label>
+          <span class="text-white fw-bold fs-5">{{ asset.name }}</span>
+          <code class="text-violet d-block mt-1" style="color: #a78bfa;">Tag: {{ asset.asset_tag }}</code>
+        </div>
+      {% endif %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3 {% if asset %}d-none{% endif %}">
+          <label for="id_asset" class="form-label">Shared Resource</label>
+          {{ form.asset }}
+          {% if form.asset.errors %}
+            <div class="text-danger small mt-1">{{ form.asset.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="id_start_time" class="form-label">Start Time</label>
+          {{ form.start_time }}
+          {% if form.start_time.errors %}
+            <div class="text-danger small mt-1">{{ form.start_time.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="id_end_time" class="form-label">End Time</label>
+          {{ form.end_time }}
+          {% if form.end_time.errors %}
+            <div class="text-danger small mt-1">{{ form.end_time.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger bg-danger bg-opacity-10 border-danger text-light mb-3 small">
+            {{ form.non_field_errors.0 }}
+          </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'booking_list' %}" class="btn btn-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">Book Time Slot</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

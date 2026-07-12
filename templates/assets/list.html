@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Asset Directory - AssetFlow{% endblock %}
+{% block page_header %}Asset Directory{% endblock %}
+
+{% block content %}
+<div class="glass-card mb-4">
+  <h5 class="text-white mb-3"><i class="fa-solid fa-filter me-2 text-violet" style="color: var(--violet-primary);"></i> Filter Assets</h5>
+  <form method="GET" action="." class="row g-3">
+    <div class="col-md-3">
+      <label for="q" class="form-label small">Search Keyword</label>
+      <input type="text" name="q" id="q" class="form-control form-control-sm" placeholder="Tag, name, serial number..." value="{{ query }}">
+    </div>
+    <div class="col-md-2">
+      <label for="category" class="form-label small">Category</label>
+      <select name="category" id="category" class="form-select form-select-sm">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if category_id == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label for="status" class="form-label small">Status</label>
+      <select name="status" id="status" class="form-select form-select-sm">
+        <option value="">All Statuses</option>
+        {% for key, val in status_list %}
+          <option value="{{ key }}" {% if status_choice == key %}selected{% endif %}>{{ val }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label for="location" class="form-label small">Location</label>
+      <input type="text" name="location" id="location" class="form-control form-control-sm" placeholder="e.g. Office A" value="{{ location }}">
+    </div>
+    <div class="col-md-2">
+      <label for="bookable" class="form-label small">Bookable Resource</label>
+      <select name="bookable" id="bookable" class="form-select form-select-sm">
+        <option value="">Any</option>
+        <option value="true" {% if bookable == 'true' %}selected{% endif %}>Shared/Bookable</option>
+        <option value="false" {% if bookable == 'false' %}selected{% endif %}>Standard Asset</option>
+      </select>
+    </div>
+    <div class="col-md-1 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary btn-sm w-100 py-2"><i class="fa-solid fa-search"></i></button>
+    </div>
+  </form>
+</div>
+
+<div class="glass-card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="m-0">Directory Listing</h5>
+    {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+      <a href="{% url 'asset_register' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> Register Asset</a>
+    {% endif %}
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Asset Tag</th>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Condition</th>
+          <th>Location</th>
+          <th>Bookable</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in assets %}
+          <tr>
+            <td><code class="text-violet" style="color: #a78bfa; font-weight: 600;">{{ a.asset_tag }}</code></td>
+            <td class="text-white fw-bold">{{ a.name }}</td>
+            <td>{{ a.category.name }}</td>
+            <td>
+              <span class="badge bg-secondary bg-opacity-25 text-light text-capitalize" style="font-size: 0.75rem;">
+                {{ a.get_condition_display }}
+              </span>
+            </td>
+            <td>{{ a.location|default:"-" }}</td>
+            <td>
+              {% if a.is_shared_bookable %}
+                <span class="text-success"><i class="fa-solid fa-circle-check"></i> Yes</span>
+              {% else %}
+                <span class="text-muted">No</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge badge-status badge-{{ a.status }}">
+                {{ a.get_status_display }}
+              </span>
+            </td>
+            <td>
+              <div class="d-flex gap-2">
+                <a href="{% url 'asset_detail' a.pk %}" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-eye"></i> View</a>
+                {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+                  <a href="{% url 'asset_edit' a.pk %}" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-pen"></i> Edit</a>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-4">No assets found matching the criteria.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

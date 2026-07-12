@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block title %}Request a Device - AssetFlow{% endblock %}
+{% block page_header %}Request a Device{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="glass-card">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-laptop text-violet me-2"></i> Request Hardware Allocation</h5>
+      <p class="text-muted small">Submit a request for a specific category of device (e.g. Laptop, Phone, Monitor). Your request will be routed to your Department Head or an Asset Manager for approval and allocation.</p>
+      
+      <form method="POST" class="mt-4">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+          <label for="{{ form.category.id_for_label }}" class="form-label">Requested Device Category</label>
+          {{ form.category }}
+          {% if form.category.errors %}
+            <div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label for="{{ form.priority.id_for_label }}" class="form-label">Request Priority</label>
+          {{ form.priority }}
+          {% if form.priority.errors %}
+            <div class="text-danger small mt-1">{{ form.priority.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-4">
+          <label for="{{ form.purpose.id_for_label }}" class="form-label">Purpose / Justification</label>
+          {{ form.purpose }}
+          {% if form.purpose.errors %}
+            <div class="text-danger small mt-1">{{ form.purpose.errors.0 }}</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="submit" class="btn btn-primary flex-fill">Submit Request</button>
+          <a href="{% url 'device_request_list' %}" class="btn btn-secondary flex-fill text-center">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

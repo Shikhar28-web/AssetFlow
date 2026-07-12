@@ -26,6 +26,7 @@ class AssetForm(forms.ModelForm):
         self.fields['department'].required = False
         self.fields['location'].required = False
         self.fields['serial_number'].required = False
+        self.fields['condition'].required = False
         
         # Check for category and build dynamic fields
         category = None

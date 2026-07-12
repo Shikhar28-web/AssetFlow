@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Approve Device Request - AssetFlow{% endblock %}
+{% block page_header %}Approve Request & Allocate Asset{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="glass-card mb-4">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-clipboard-question text-violet me-2"></i> Request Overview</h5>
+      <dl class="row text-white mb-0">
+        <dt class="col-sm-4 text-muted fw-normal">Requested By</dt>
+        <dd class="col-sm-8 fw-bold">{{ request_item.requested_by.email }}</dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Department</dt>
+        <dd class="col-sm-8 fw-bold">{{ request_item.requested_by.department.name|default:"Unassigned" }}</dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Device Category</dt>
+        <dd class="col-sm-8 fw-bold text-violet" style="color: var(--violet-primary);">{{ request_item.category.name }}</dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Request Priority</dt>
+        <dd class="col-sm-8">
+          <span class="badge {% if request_item.priority == 'high' %}bg-danger{% elif request_item.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white">
+            {{ request_item.get_priority_display }}
+          </span>
+        </dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Justification</dt>
+        <dd class="col-sm-8 text-light">{{ request_item.purpose }}</dd>
+      </dl>
+    </div>
+
+    <div class="glass-card">
+      <h5 class="text-white mb-3"><i class="fa-solid fa-list-check text-success me-2"></i> Allocate Available Asset</h5>
+      <p class="text-muted small">Select an available asset of category <strong>{{ request_item.category.name }}</strong> to allocate to this employee.</p>
+      
+      <form method="POST" class="mt-4">
+        {% csrf_token %}
+        
+        <div class="mb-4">
+          <label for="assetSelect" class="form-label">Available Assets</label>
+          <select name="asset" id="assetSelect" class="form-select" required>
+            <option value="">-- Choose an Available {{ request_item.category.name }} --</option>
+            {% for asset in available_assets %}
+              <option value="{{ asset.id }}">{{ asset.name }} [{{ asset.asset_tag }}] - {{ asset.location }}</option>
+            {% empty %}
+              <option value="" disabled>No available assets in this category</option>
+            {% endfor %}
+          </select>
+          {% if not available_assets %}
+            <div class="text-danger small mt-2">
+              <i class="fa-solid fa-circle-exclamation me-1"></i> Warning: There are no available assets in this category to allocate. You must register one or check one in first.
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="submit" class="btn btn-primary flex-fill" {% if not available_assets %}disabled{% endif %}>
+            Confirm Allocation & Approve
+          </button>
+          <a href="{% url 'device_request_manage' %}" class="btn btn-secondary flex-fill text-center">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -40,3 +40,26 @@ class TransferRequest(models.Model):
 
     def __str__(self):
         return f"Transfer {self.asset} from {self.current_holder} to {self.target_holder} ({self.get_status_display()})"
+
+class DeviceRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_requests')
+    category = models.ForeignKey('organization.AssetCategory', on_delete=models.CASCADE, related_name='device_requests')
+    purpose = models.TextField()
+    priority = models.CharField(max_length=15, choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')], default='medium')
+    requested_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
+    
+    # Track approval/allocation
+    processed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='processed_device_requests')
+    allocated_asset = models.ForeignKey('assets.Asset', on_delete=models.SET_NULL, null=True, blank=True, related_name='device_allocations')
+    processed_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Request for {self.category.name} by {self.requested_by.email} ({self.get_status_display()})"
+

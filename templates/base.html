@@ -57,6 +57,19 @@
             <i class="fa-solid fa-clipboard-check"></i> Audits
           </a>
         </li>
+        {% if request.user.role in 'admin,asset_manager,department_head' or request.user.is_staff %}
+        <li>
+          <a href="{% url 'device_request_manage' %}" class="sidebar-link {% if 'device-requests' in request.path %}active{% endif %}">
+            <i class="fa-solid fa-laptop-medical"></i> Device Requests
+          </a>
+        </li>
+        {% else %}
+        <li>
+          <a href="{% url 'device_request_list' %}" class="sidebar-link {% if 'device-requests' in request.path %}active{% endif %}">
+            <i class="fa-solid fa-laptop-medical"></i> My Requests
+          </a>
+        </li>
+        {% endif %}
         
         {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
         <li class="mt-4 mb-1">

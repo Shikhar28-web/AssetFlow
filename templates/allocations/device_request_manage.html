@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block title %}Manage Device Requests - AssetFlow{% endblock %}
+{% block page_header %}Manage Device Requests{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <div class="col-12">
+    <div class="glass-card">
+      <h5 class="text-white mb-4"><i class="fa-solid fa-tasks text-violet me-2"></i> Employee Device Requests</h5>
+      
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Date Requested</th>
+              <th>Employee</th>
+              <th>Department</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Justification</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in requests %}
+              <tr>
+                <td>{{ r.requested_at|date:"Y-m-d H:i" }}</td>
+                <td class="text-white font-monospace">{{ r.requested_by.email }}</td>
+                <td>{{ r.requested_by.department.name|default:"—" }}</td>
+                <td class="text-white">{{ r.category.name }}</td>
+                <td>
+                  <span class="badge {% if r.priority == 'high' %}bg-danger{% elif r.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white" style="font-size: 0.75rem;">
+                    {{ r.get_priority_display }}
+                  </span>
+                </td>
+                <td class="text-muted text-truncate" style="max-width: 200px;" title="{{ r.purpose }}">{{ r.purpose }}</td>
+                <td>
+                  <span class="badge rounded-pill bg-opacity-20 {% if r.status == 'approved' %}bg-success text-success{% elif r.status == 'pending' %}bg-warning text-warning{% else %}bg-secondary text-secondary{% endif %}" style="font-size: 0.75rem;">
+                    {{ r.get_status_display }}
+                  </span>
+                </td>
+                <td>
+                  {% if r.status == 'pending' %}
+                    <div class="d-flex gap-2">
+                      <a href="{% url 'device_request_approve' r.pk %}" class="btn btn-sm btn-success py-1 px-2" style="font-size: 0.75rem;"><i class="fa-solid fa-check"></i> Approve</a>
+                      <a href="{% url 'device_request_reject' r.pk %}" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 0.75rem;" onclick="return confirm('Reject this request?');"><i class="fa-solid fa-xmark"></i> Reject</a>
+                    </div>
+                  {% else %}
+                    <small class="text-muted">Processed</small>
+                  {% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="8" class="text-center text-muted py-4">No device requests found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

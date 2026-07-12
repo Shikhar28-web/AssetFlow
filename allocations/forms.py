@@ -63,5 +63,23 @@ class AssetReturnForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['return_condition'].required = True
+        self.fields['return_condition'].required = False
         self.fields['return_notes'].required = False
+
+from .models import DeviceRequest
+from organization.models import AssetCategory
+
+class DeviceRequestForm(forms.ModelForm):
+    class Meta:
+        model = DeviceRequest
+        fields = ['category', 'priority', 'purpose']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'priority': forms.Select(attrs={'class': 'form-control'}),
+            'purpose': forms.Textarea(attrs={'class': 'form-control', 'rows': 4, 'placeholder': 'Why do you need this device? (e.g. For iOS app testing)'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['category'].queryset = AssetCategory.objects.all().order_by('name')
+

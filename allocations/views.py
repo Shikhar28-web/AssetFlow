@@ -316,3 +316,178 @@ def reject_transfer(request, transfer_pk):
 
     messages.success(request, "Transfer request rejected.")
     return redirect('transfer_list')
+
+
+from .models import DeviceRequest
+from .forms import DeviceRequestForm
+
+@login_required
+def device_request_create(request):
+    if request.method == 'POST':
+        form = DeviceRequestForm(request.POST)
+        if form.is_valid():
+            device_request = form.save(commit=False)
+            device_request.requested_by = request.user
+            device_request.status = 'pending'
+            device_request.save()
+
+            # Create notification for admins/managers
+            managers = User.objects.filter(role__in=['admin', 'asset_manager'])
+            for m in managers:
+                Notification.objects.create(
+                    user=m,
+                    message=f"New device request raised for category '{device_request.category.name}' by {request.user.email}."
+                )
+
+            # Create notification for department head if assignee has a department
+            if request.user.department:
+                heads = User.objects.filter(role='department_head', department=request.user.department)
+                for h in heads:
+                    Notification.objects.create(
+                        user=h,
+                        message=f"Department member {request.user.email} requested a device of category '{device_request.category.name}'."
+                    )
+
+            ActionLog.objects.create(
+                user=request.user,
+                action="Device Requested",
+                details=f"Requested a device of category {device_request.category.name} with {device_request.priority} priority."
+            )
+
+            messages.success(request, f"Device request for '{device_request.category.name}' submitted successfully.")
+            return redirect('device_request_list')
+    else:
+        form = DeviceRequestForm()
+    return render(request, 'allocations/device_request_form.html', {'form': form})
+
+@login_required
+def device_request_list(request):
+    requests = DeviceRequest.objects.filter(requested_by=request.user).order_by('-requested_at')
+    return render(request, 'allocations/device_request_list.html', {'requests': requests})
+
+@login_required
+def device_request_manage(request):
+    user = request.user
+    # Gated check: Admin / Asset Manager / Department Head
+    if user.role in ['admin', 'asset_manager'] or user.is_staff:
+        requests = DeviceRequest.objects.all().order_by('-requested_at')
+    elif user.role == 'department_head' and user.department:
+        requests = DeviceRequest.objects.filter(requested_by__department=user.department).order_by('-requested_at')
+    else:
+        messages.error(request, "You do not have permission to access the device requests dashboard.")
+        return redirect('dashboard')
+    
+    return render(request, 'allocations/device_request_manage.html', {'requests': requests})
+
+@login_required
+def device_request_approve(request, pk):
+    device_request = get_object_or_404(DeviceRequest, pk=pk, status='pending')
+    user = request.user
+    
+    # Gated check
+    is_allowed = False
+    if user.role in ['admin', 'asset_manager'] or user.is_staff:
+        is_allowed = True
+    elif user.role == 'department_head' and user.department and device_request.requested_by.department == user.department:
+        is_allowed = True
+        
+    if not is_allowed:
+        messages.error(request, "You do not have permission to approve this request.")
+        return redirect('device_request_manage')
+
+    # Query available assets of this category
+    available_assets = Asset.objects.filter(category=device_request.category, status='available')
+
+    if request.method == 'POST':
+        asset_id = request.POST.get('asset')
+        if not asset_id:
+            messages.error(request, "Please select an asset to allocate.")
+        else:
+            asset = get_object_or_404(Asset, pk=asset_id, category=device_request.category, status='available')
+            
+            try:
+                with transaction.atomic():
+                    locked_asset = Asset.objects.select_for_update().get(pk=asset.pk)
+                    if locked_asset.status != 'available':
+                        raise ValueError("Asset is no longer available.")
+                        
+                    # Allocate asset
+                    locked_asset.status = 'allocated'
+                    locked_asset.department = device_request.requested_by.department
+                    locked_asset.save()
+                    
+                    allocation = Allocation.objects.create(
+                        asset=locked_asset,
+                        assignee=device_request.requested_by,
+                        department=device_request.requested_by.department,
+                        allocated_by=request.user,
+                        expected_return_date=None,
+                        status='active'
+                    )
+                    
+                    # Update device request status
+                    device_request.status = 'approved'
+                    device_request.processed_by = request.user
+                    device_request.allocated_asset = locked_asset
+                    device_request.processed_at = timezone.now()
+                    device_request.save()
+                    
+                    # Action log
+                    ActionLog.objects.create(
+                        user=request.user,
+                        action="Device Request Approved",
+                        details=f"Approved device request #{device_request.id} for {device_request.requested_by.email} and allocated asset {locked_asset.asset_tag}."
+                    )
+                    
+                    # Notify employee
+                    Notification.objects.create(
+                        user=device_request.requested_by,
+                        message=f"Your request for a '{device_request.category.name}' has been approved! Asset '{locked_asset.name}' [{locked_asset.asset_tag}] is now allocated to you."
+                    )
+                    
+                    messages.success(request, f"Request approved. Asset '{locked_asset.name}' allocated to {device_request.requested_by.email}.")
+                    return redirect('device_request_manage')
+            except Exception as e:
+                messages.error(request, f"Approval failed: {str(e)}")
+                
+    return render(request, 'allocations/device_request_approve.html', {
+        'request_item': device_request,
+        'available_assets': available_assets
+    })
+
+@login_required
+def device_request_reject(request, pk):
+    device_request = get_object_or_404(DeviceRequest, pk=pk, status='pending')
+    user = request.user
+    
+    # Gated check
+    is_allowed = False
+    if user.role in ['admin', 'asset_manager'] or user.is_staff:
+        is_allowed = True
+    elif user.role == 'department_head' and user.department and device_request.requested_by.department == user.department:
+        is_allowed = True
+        
+    if not is_allowed:
+        messages.error(request, "You do not have permission to reject this request.")
+        return redirect('device_request_manage')
+        
+    with transaction.atomic():
+        device_request.status = 'rejected'
+        device_request.processed_by = request.user
+        device_request.processed_at = timezone.now()
+        device_request.save()
+        
+        ActionLog.objects.create(
+            user=request.user,
+            action="Device Request Rejected",
+            details=f"Rejected device request #{device_request.id} for {device_request.requested_by.email}."
+        )
+        
+        Notification.objects.create(
+            user=device_request.requested_by,
+            message=f"Your request for a '{device_request.category.name}' has been rejected."
+        )
+        
+    messages.success(request, "Device request rejected successfully.")
+    return redirect('device_request_manage')
+

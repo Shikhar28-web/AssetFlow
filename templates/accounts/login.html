@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - AssetFlow</title>
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Bootstrap 5 CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <style>
+    body {
+      background-color: #0b0c10;
+      color: #c5c6c7;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      background: radial-gradient(circle at 10% 20%, rgba(111, 66, 193, 0.15) 0%, rgba(0, 0, 0, 0) 90%), #0b0c10;
+    }
+    .login-card {
+      background-color: #1f2833;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+    }
+    .brand-title {
+      font-weight: 800;
+      font-size: 2rem;
+      color: #ffffff;
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+    .brand-title span {
+      color: #6f42c1;
+    }
+    .form-control {
+      background-color: #121620 !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      border-radius: 8px !important;
+      padding: 0.75rem 1rem !important;
+    }
+    .form-control:focus {
+      border-color: #6f42c1 !important;
+      box-shadow: 0 0 0 4px rgba(111, 66, 193, 0.4) !important;
+    }
+    .btn-primary {
+      background-color: #6f42c1 !important;
+      border-color: #6f42c1 !important;
+      border-radius: 8px !important;
+      padding: 0.75rem !important;
+      font-weight: 600 !important;
+      width: 100%;
+      box-shadow: 0 4px 15px rgba(111, 66, 193, 0.4) !important;
+    }
+    .btn-primary:hover {
+      background-color: #5a32a3 !important;
+      border-color: #5a32a3 !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="brand-title">
+      <i class="fa-solid fa-cube text-violet"></i> Asset<span>Flow</span>
+    </div>
+    
+    <h4 class="text-white text-center mb-4">Sign In</h4>
+
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-danger bg-danger bg-opacity-10 border-danger text-light small py-2 mb-3" role="alert">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="POST">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_username" class="form-label text-white fw-medium">Email Address</label>
+        <div class="input-group">
+          <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-regular fa-envelope"></i></span>
+          <input type="email" name="username" autofocus maxlength="254" class="form-control" placeholder="name@company.com" required id="id_username">
+        </div>
+      </div>
+      <div class="mb-4">
+        <label for="id_password" class="form-label text-white fw-medium">Password</label>
+        <div class="input-group">
+          <span class="input-group-text bg-dark border-secondary text-muted"><i class="fa-solid fa-lock"></i></span>
+          <input type="password" name="password" class="form-control" placeholder="••••••••" required id="id_password">
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary mb-3">Sign In</button>
+      
+      <div class="text-center mt-3">
+        <span class="text-muted">Don't have an account?</span> 
+        <a href="{% url 'signup' %}" class="text-decoration-none fw-bold" style="color: #6f42c1;">Sign Up</a>
+      </div>
+    </form>
+  </div>
+
+</body>
+</html>

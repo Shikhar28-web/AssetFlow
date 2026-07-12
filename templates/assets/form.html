@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} - AssetFlow{% endblock %}
+{% block page_header %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-9 mx-auto">
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <div class="glass-card mb-4">
+        <h5 class="text-white mb-4"><i class="fa-solid fa-boxes-stacked me-2"></i> Standard Asset Parameters</h5>
+        
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label for="id_name" class="form-label">Asset Name</label>
+            {{ form.name }}
+            {% if form.name.errors %}
+              <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label for="id_category" class="form-label">Asset Category</label>
+            {{ form.category }}
+            <div class="form-text text-muted">Changing category updates available custom fields.</div>
+            {% if form.category.errors %}
+              <div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>
+            {% endif %}
+          </div>
+          
+          <div class="col-md-6">
+            <label for="id_serial_number" class="form-label">Serial Number</label>
+            {{ form.serial_number }}
+          </div>
+          <div class="col-md-3">
+            <label for="id_acquisition_cost" class="form-label">Acquisition Cost ($)</label>
+            {{ form.acquisition_cost }}
+            {% if form.acquisition_cost.errors %}
+              <div class="text-danger small mt-1">{{ form.acquisition_cost.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-3">
+            <label for="id_acquisition_date" class="form-label">Acquisition Date</label>
+            {{ form.acquisition_date }}
+            {% if form.acquisition_date.errors %}
+              <div class="text-danger small mt-1">{{ form.acquisition_date.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-4">
+            <label for="id_condition" class="form-label">Condition</label>
+            {{ form.condition }}
+          </div>
+          <div class="col-md-4">
+            <label for="id_location" class="form-label">Location</label>
+            {{ form.location }}
+          </div>
+          <div class="col-md-4">
+            <label for="id_department" class="form-label">Department Owner (optional)</label>
+            {{ form.department }}
+          </div>
+
+          <div class="col-md-6">
+            <label for="id_status" class="form-label">Initial Status</label>
+            {{ form.status }}
+          </div>
+          <div class="col-md-6">
+            <label for="id_photo" class="form-label">Asset Photo (optional)</label>
+            {{ form.photo }}
+          </div>
+
+          <div class="col-12">
+            <div class="form-check mt-2">
+              {{ form.is_shared_bookable }}
+              <label class="form-check-label text-white fw-bold" for="id_is_shared_bookable">
+                Mark as Shared & Bookable Resource
+              </label>
+              <div class="form-text text-muted">Allows employees to book this resource in time slots on the booking calendar.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Custom Dynamic Attributes Card -->
+      <div class="glass-card mb-4">
+        <h5 class="text-white mb-3"><i class="fa-solid fa-tags me-2"></i> Category Custom Attributes</h5>
+        
+        <div class="row g-3">
+          {% for field in form %}
+            {% if field.name|slice:":7" == "custom_" %}
+              <div class="col-md-6">
+                <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                  <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                {% endif %}
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+        
+        <!-- Fallback if no custom fields -->
+        <div id="no-custom-fields-alert" class="text-muted text-center py-3 d-none">
+          Select a category that contains dynamic attributes schema to show input fields.
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end mb-5">
+        <a href="{% url 'asset_list' %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" name="save_asset" class="btn btn-primary">Save Asset Registration</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Show message if no custom fields are rendered
+  document.addEventListener("DOMContentLoaded", function() {
+    const customInputs = document.querySelectorAll('[name^="custom_"]');
+    if (customInputs.length === 0) {
+      document.getElementById('no-custom-fields-alert').classList.remove('d-none');
+    }
+  });
+</script>
+{% endblock %}

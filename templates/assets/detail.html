@@ -1,0 +1,242 @@
+{% extends 'base.html' %}
+{% block title %}Asset Details - {{ asset.asset_tag }}{% endblock %}
+{% block page_header %}Asset Details: {{ asset.asset_tag }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left Side: Asset Details -->
+  <div class="col-lg-5">
+    <div class="glass-card mb-4">
+      <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+          <span class="badge badge-status badge-{{ asset.status }} mb-2">
+            {{ asset.get_status_display }}
+          </span>
+          <h3 class="text-white m-0">{{ asset.name }}</h3>
+          <small class="text-muted">Category: {{ asset.category.name }}</small>
+        </div>
+        {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+          <a href="{% url 'asset_edit' asset.pk %}" class="btn btn-outline-light btn-sm"><i class="fa-regular fa-edit"></i> Edit</a>
+        {% endif %}
+      </div>
+
+      <!-- Asset Photo -->
+      {% if asset.photo %}
+        <div class="mb-4 text-center border border-secondary rounded p-2 bg-dark">
+          <img src="{{ asset.photo.url }}" class="img-fluid rounded" alt="{{ asset.name }}" style="max-height: 240px; object-fit: contain;">
+        </div>
+      {% endif %}
+
+      <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Specifications</h5>
+      <dl class="row text-white mb-4">
+        <dt class="col-sm-5 text-muted fw-normal">Serial Number</dt>
+        <dd class="col-sm-7 fw-bold">{{ asset.serial_number|default:"N/A" }}</dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Location</dt>
+        <dd class="col-sm-7 fw-bold">{{ asset.location|default:"N/A" }}</dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Current Condition</dt>
+        <dd class="col-sm-7">
+          <span class="badge bg-secondary text-capitalize">{{ asset.get_condition_display }}</span>
+        </dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Acquisition Date</dt>
+        <dd class="col-sm-7 fw-bold">{{ asset.acquisition_date|date:"Y-m-d" }}</dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Acquisition Cost</dt>
+        <dd class="col-sm-7 fw-bold text-success">${{ asset.acquisition_cost }}</dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Shared Resource</dt>
+        <dd class="col-sm-7 fw-bold">
+          {% if asset.is_shared_bookable %}
+            <span class="text-success"><i class="fa-solid fa-circle-check"></i> Bookable</span>
+          {% else %}
+            <span class="text-muted">Standard</span>
+          {% endif %}
+        </dd>
+
+        <dt class="col-sm-5 text-muted fw-normal">Department Owner</dt>
+        <dd class="col-sm-7 fw-bold">{{ asset.department.name|default:"Unassigned" }}</dd>
+      </dl>
+
+      <!-- Dynamic Custom Attributes -->
+      {% if asset.custom_attributes %}
+        <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Custom Specifications</h5>
+        <dl class="row text-white mb-0">
+          {% for key, val in asset.custom_attributes.items %}
+            <dt class="col-sm-5 text-muted fw-normal">{{ key }}</dt>
+            <dd class="col-sm-7 fw-bold">{{ val }}</dd>
+          {% endfor %}
+        </dl>
+      {% endif %}
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="glass-card">
+      <h5 class="text-bright mb-3">Action Desk</h5>
+      <div class="d-grid gap-2">
+        {% if asset.status == 'available' %}
+          {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+            <a href="{% url 'allocate_asset_specific' asset.pk %}" class="btn btn-primary"><i class="fa-solid fa-user-plus me-2"></i> Allocate Asset</a>
+          {% endif %}
+          {% if asset.is_shared_bookable %}
+            <a href="{% url 'book_resource_specific' asset.pk %}" class="btn btn-secondary"><i class="fa-solid fa-calendar-plus me-2"></i> Book Time Slot</a>
+          {% endif %}
+        {% elif asset.status == 'allocated' %}
+          {% for alloc in allocations %}
+            {% if alloc.status == 'active' %}
+              {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+                <a href="{% url 'return_asset' alloc.pk %}" class="btn btn-success"><i class="fa-solid fa-clipboard-check me-2"></i> Record Asset Return</a>
+              {% endif %}
+              {% if alloc.assignee and alloc.assignee != request.user %}
+                <a href="{% url 'raise_transfer_request' asset.pk %}" class="btn btn-info"><i class="fa-solid fa-arrows-left-right me-2"></i> Request Transfer</a>
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        
+        <a href="{% url 'raise_maintenance_specific' asset.pk %}" class="btn btn-warning text-dark"><i class="fa-solid fa-screwdriver-wrench me-2"></i> Request Repair Work</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Side: History Tabs -->
+  <div class="col-lg-7">
+    <div class="glass-card h-100">
+      <!-- Tabs -->
+      <ul class="nav nav-tabs border-secondary mb-4" id="historyTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link text-light active fw-bold" id="alloc-tab" data-bs-toggle="tab" data-bs-target="#alloc-history" type="button" role="tab" aria-controls="alloc-history" aria-selected="true">
+            Allocation Log
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link text-light fw-bold" id="maint-tab" data-bs-toggle="tab" data-bs-target="#maint-history" type="button" role="tab" aria-controls="maint-history" aria-selected="false">
+            Maintenance History
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link text-light fw-bold" id="booking-tab" data-bs-toggle="tab" data-bs-target="#booking-history" type="button" role="tab" aria-controls="booking-history" aria-selected="false">
+            Bookings
+          </button>
+        </li>
+      </ul>
+
+      <!-- Tab content -->
+      <div class="tab-content text-white">
+        <!-- Allocation Log Tab -->
+        <div class="tab-pane fade show active" id="alloc-history" role="tabpanel" aria-labelledby="alloc-tab">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Assignee</th>
+                  <th>Alloc Date</th>
+                  <th>Return Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in allocations %}
+                  <tr>
+                    <td>
+                      {% if a.assignee %}
+                        {{ a.assignee.email }}
+                      {% else %}
+                        Dept: {{ a.department.name }}
+                      {% endif %}
+                    </td>
+                    <td>{{ a.allocated_at|date:"Y-m-d" }}</td>
+                    <td>{{ a.returned_at|date:"Y-m-d"|default:"Active" }}</td>
+                    <td>
+                      <span class="badge {% if a.status == 'active' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-25 text-light">
+                        {{ a.get_status_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No allocation history available.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Maintenance History Tab -->
+        <div class="tab-pane fade" id="maint-history" role="tabpanel" aria-labelledby="maint-tab">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>Job ID</th>
+                  <th>Priority</th>
+                  <th>Reported Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in maintenance %}
+                  <tr>
+                    <td><a href="{% url 'maintenance_detail' m.id %}" class="text-decoration-none text-white fw-bold">Maint-{{ m.id }}</a></td>
+                    <td>
+                      <span class="badge {% if m.priority == 'critical' or m.priority == 'high' %}bg-danger{% elif m.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white">
+                        {{ m.get_priority_display }}
+                      </span>
+                    </td>
+                    <td>{{ m.created_at|date:"Y-m-d" }}</td>
+                    <td>
+                      <span class="badge {% if m.status == 'resolved' %}bg-success{% elif m.status == 'pending' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white">
+                        {{ m.get_status_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No maintenance requests raised for this asset.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Bookings Tab -->
+        <div class="tab-pane fade" id="booking-history" role="tabpanel" aria-labelledby="booking-tab">
+          <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Start Time</th>
+                  <th>End Time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for b in bookings %}
+                  <tr>
+                    <td>{{ b.booked_by.email }}</td>
+                    <td>{{ b.start_time|date:"Y-m-d H:i" }}</td>
+                    <td>{{ b.end_time|date:"Y-m-d H:i" }}</td>
+                    <td>
+                      <span class="badge {% if b.status == 'upcoming' %}bg-primary{% elif b.status == 'ongoing' %}bg-success{% else %}bg-secondary{% endif %} bg-opacity-25 text-white">
+                        {{ b.get_status_display }}
+                      </span>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr>
+                    <td colspan="4" class="text-center text-muted">No resource booking records found.</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

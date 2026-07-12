@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% block title %}Reports & Analytics - AssetFlow{% endblock %}
+{% block page_header %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- Utilization Card -->
+  <div class="col-md-4">
+    <div class="glass-card h-100">
+      <h6 class="text-muted text-uppercase fw-bold">Overall Asset Utilization</h6>
+      <h2 class="text-white mt-3">{{ utilization_rate }}%</h2>
+      <div class="progress bg-dark mt-3" style="height: 10px;">
+        <div class="progress-bar" role="progressbar" style="width: {{ utilization_rate }}%; background-color: var(--violet-primary);" aria-valuenow="{{ utilization_rate }}" aria-valuemin="0" aria-valuemax="100"></div>
+      </div>
+      <small class="text-muted d-block mt-3">{{ allocated_assets }} of {{ total_assets }} assets currently allocated.</small>
+    </div>
+  </div>
+
+  <!-- Export Panel -->
+  <div class="col-md-8">
+    <div class="glass-card h-100 d-flex flex-column justify-content-between">
+      <div>
+        <h5 class="text-bright mb-2">Export Operational Masterdata</h5>
+        <p class="text-muted mb-4 small">Generate and download standard spreadsheets for audit, reconciliation, and off-system analysis.</p>
+      </div>
+      <div>
+        <a href="?export=assets" class="btn btn-primary"><i class="fa-solid fa-file-csv me-2"></i> Export Assets Directory (CSV)</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Chart 1: Maintenance by Category -->
+  <div class="col-lg-6">
+    <div class="glass-card">
+      <h5 class="text-white mb-3">Repair Frequency by Category</h5>
+      <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+        <canvas id="maintCategoryChart"></canvas>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Chart 2: Department-wise Allocations -->
+  <div class="col-lg-6">
+    <div class="glass-card">
+      <h5 class="text-white mb-3">Active Department Allocations</h5>
+      <div style="height: 240px; display: flex; align-items: center; justify-content: center;">
+        <canvas id="deptAllocChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Most Booked Shared Resources -->
+  <div class="col-md-6">
+    <div class="glass-card h-100">
+      <h5 class="text-bright mb-3"><i class="fa-solid fa-star me-2 text-violet" style="color: var(--violet-primary);"></i> Most Active Bookable Resources</h5>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Asset</th>
+              <th>Category</th>
+              <th>Total Bookings</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for asset in most_booked %}
+              <tr>
+                <td class="text-white fw-bold">{{ asset.name }}</td>
+                <td>{{ asset.category.name }}</td>
+                <td class="fw-bold text-violet" style="color: var(--violet-primary);">{{ asset.booking_count }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="3" class="text-center text-muted">No booking logs registered.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assets nearing retirement -->
+  <div class="col-md-6">
+    <div class="glass-card h-100">
+      <h5 class="text-bright mb-3"><i class="fa-solid fa-hourglass-half me-2 text-warning"></i> Assets Nearing Retirement</h5>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Asset Tag</th>
+              <th>Name</th>
+              <th>Acquisition Date</th>
+              <th>Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for asset in retirement_candidates %}
+              <tr>
+                <td><code class="text-violet" style="color: #a78bfa;">{{ asset.asset_tag }}</code></td>
+                <td class="text-white">{{ asset.name }}</td>
+                <td>{{ asset.acquisition_date|date:"Y-m-d" }}</td>
+                <td>${{ asset.acquisition_cost }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="4" class="text-center text-muted">No assets meet the retirement timeline threshold.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // 1. Bar Chart: Repairs by Category
+  const ctxMaint = document.getElementById('maintCategoryChart').getContext('2d');
+  new Chart(ctxMaint, {
+    type: 'bar',
+    data: {
+      labels: [{% for c in maint_by_category %}'{{ c.name }}',{% endfor %}],
+      datasets: [{
+        label: 'Repair Jobs Count',
+        data: [{% for c in maint_by_category %}{{ c.request_count }},{% endfor %}],
+        backgroundColor: '#6f42c1',
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#c5c6c7' } },
+        y: { grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { color: '#c5c6c7', stepSize: 1 } }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+
+  // 2. Doughnut Chart: Department Allocations
+  const ctxDept = document.getElementById('deptAllocChart').getContext('2d');
+  new Chart(ctxDept, {
+    type: 'doughnut',
+    data: {
+      labels: [{% for d in dept_allocations %}'{{ d.name }}',{% endfor %}],
+      datasets: [{
+        data: [{% for d in dept_allocations %}{{ d.active_allocations }},{% endfor %}],
+        backgroundColor: ['#3498db', '#9b59b6', '#e67e22', '#2ecc71', '#1abc9c', '#e74c3c'],
+        borderColor: '#1f2833',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { color: '#c5c6c7', font: { family: 'Inter', size: 12 } }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance Ticket #{{ request_obj.id }} - AssetFlow{% endblock %}
+{% block page_header %}Maintenance Ticket #{{ request_obj.id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+  <!-- Left Column: Details -->
+  <div class="col-lg-7">
+    <div class="glass-card mb-4 h-100">
+      <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+          <span class="badge bg-opacity-25 {% if request_obj.status == 'resolved' %}bg-success text-success{% elif request_obj.status == 'pending' %}bg-warning text-warning{% else %}bg-info text-info{% endif %} mb-2">
+            {{ request_obj.get_status_display }}
+          </span>
+          <h3 class="text-white m-0">Asset: {{ request_obj.asset.name }}</h3>
+          <code class="text-violet" style="color: #a78bfa;">Tag: {{ request_obj.asset.asset_tag }}</code>
+        </div>
+      </div>
+
+      <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Ticket Information</h5>
+      <dl class="row text-white mb-4">
+        <dt class="col-sm-4 text-muted fw-normal">Priority</dt>
+        <dd class="col-sm-8">
+          <span class="badge {% if request_obj.priority == 'critical' or request_obj.priority == 'high' %}bg-danger{% elif request_obj.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white">
+            {{ request_obj.get_priority_display }}
+          </span>
+        </dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Raised By</dt>
+        <dd class="col-sm-8 fw-bold">{{ request_obj.raised_by.email }}</dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Created On</dt>
+        <dd class="col-sm-8 fw-bold">{{ request_obj.created_at|date:"Y-m-d H:i" }}</dd>
+
+        <dt class="col-sm-4 text-muted fw-normal">Assigned Technician</dt>
+        <dd class="col-sm-8 fw-bold">{{ request_obj.assigned_technician.email|default:"None Assigned" }}</dd>
+
+        {% if request_obj.resolved_at %}
+          <dt class="col-sm-4 text-muted fw-normal">Resolved On</dt>
+          <dd class="col-sm-8 fw-bold">{{ request_obj.resolved_at|date:"Y-m-d H:i" }}</dd>
+        {% endif %}
+      </dl>
+
+      <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Issue Description</h5>
+      <p class="text-white p-3 bg-dark rounded border border-secondary small">{{ request_obj.description }}</p>
+
+      {% if request_obj.resolution_notes %}
+        <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Resolution Notes</h5>
+        <p class="text-success p-3 bg-dark rounded border border-success border-opacity-25 small">{{ request_obj.resolution_notes }}</p>
+      {% endif %}
+
+      {% if request_obj.photo %}
+        <h5 class="text-bright border-bottom border-secondary pb-2 mb-3">Attached Photo</h5>
+        <div class="text-center p-2 bg-dark rounded border border-secondary">
+          <img src="{{ request_obj.photo.url }}" class="img-fluid rounded" alt="Issue photo" style="max-height: 320px; object-fit: contain;">
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right Column: Status Controls for Managers -->
+  <div class="col-lg-5">
+    {% if request.user.role in 'admin,asset_manager' or request.user.is_staff %}
+      <div class="glass-card mb-4">
+        <h5 class="text-bright mb-3"><i class="fa-solid fa-user-gear me-2"></i> Technician Action Panel</h5>
+        <form method="POST">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="id_status" class="form-label">Workflow Status</label>
+            {{ form.status }}
+          </div>
+          
+          <div class="mb-3">
+            <label for="id_assigned_technician" class="form-label">Assign Technician</label>
+            {{ form.assigned_technician }}
+          </div>
+
+          <div class="mb-4">
+            <label for="id_resolution_notes" class="form-label">Resolution Notes</label>
+            {{ form.resolution_notes }}
+            <div class="form-text text-muted">Provide details if marking the ticket as Resolved.</div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-primary">Update Ticket Status</button>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+
+    <div class="glass-card">
+      <h5 class="text-bright mb-3">Operational Workflow</h5>
+      <ul class="list-unstyled mb-0">
+        <li class="d-flex align-items-center gap-2 mb-2 {% if request_obj.status == 'pending' %}text-warning fw-bold{% else %}text-muted{% endif %}">
+          <i class="fa-regular fa-circle-question fs-5"></i> 1. Pending (Awaiting review)
+        </li>
+        <li class="d-flex align-items-center gap-2 mb-2 {% if request_obj.status == 'approved' %}text-info fw-bold{% else %}text-muted{% endif %}">
+          <i class="fa-regular fa-circle-check fs-5"></i> 2. Approved (Asset flips to Under Maintenance)
+        </li>
+        <li class="d-flex align-items-center gap-2 mb-2 {% if request_obj.status == 'technician_assigned' %}text-info fw-bold{% else %}text-muted{% endif %}">
+          <i class="fa-regular fa-circle-user fs-5"></i> 3. Technician Assigned
+        </li>
+        <li class="d-flex align-items-center gap-2 mb-2 {% if request_obj.status == 'in_progress' %}text-info fw-bold{% else %}text-muted{% endif %}">
+          <i class="fa-solid fa-spinner fa-spin fs-5"></i> 4. Work In Progress
+        </li>
+        <li class="d-flex align-items-center gap-2 {% if request_obj.status == 'resolved' %}text-success fw-bold{% else %}text-muted{% endif %}">
+          <i class="fa-regular fa-circle-check fs-5 text-success"></i> 5. Resolved (Asset returns to Available)
+        </li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}Resource Bookings - AssetFlow{% endblock %}
+{% block page_header %}Resource Bookings{% endblock %}
+
+{% block extra_head %}
+<!-- FullCalendar 6 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+<style>
+  .fc {
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+  .fc-theme-standard td, .fc-theme-standard th {
+    border-color: var(--border-color) !important;
+  }
+  .fc-col-header-cell-cushion, .fc-daygrid-day-number {
+    color: var(--text-bright) !important;
+    text-decoration: none !important;
+  }
+  .fc-toolbar-title {
+    color: var(--text-bright) !important;
+    font-weight: 700;
+  }
+  .fc-button-primary {
+    background-color: var(--violet-primary) !important;
+    border-color: var(--violet-primary) !important;
+  }
+  .fc-button-primary:hover {
+    background-color: var(--violet-hover) !important;
+    border-color: var(--violet-hover) !important;
+  }
+  .fc-button-active {
+    background-color: var(--violet-hover) !important;
+    border-color: var(--violet-hover) !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+  <!-- Left Side: Interactive Calendar -->
+  <div class="col-lg-8">
+    <div class="glass-card">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="m-0 text-white"><i class="fa-solid fa-calendar me-2"></i> Resource Booking Calendar</h5>
+        <div class="d-flex align-items-center gap-2" style="max-width: 280px;">
+          <label for="assetSelectCalendar" class="form-label text-muted small m-0 text-nowrap">Filter Resource:</label>
+          <select id="assetSelectCalendar" class="form-select form-select-sm">
+            {% for asset in bookable_assets %}
+              <option value="{{ asset.id }}">{{ asset.name }} [{{ asset.asset_tag }}]</option>
+            {% empty %}
+              <option value="">No Bookable Resources</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      
+      <div id="calendar"></div>
+    </div>
+  </div>
+
+  <!-- Right Side: Personal Bookings & Quick Book -->
+  <div class="col-lg-4">
+    <div class="glass-card mb-4">
+      <h5 class="text-white mb-3">Quick Book</h5>
+      <p class="text-muted small">Reserve meeting rooms, development servers, shared testing devices, or vehicles in specific time slots.</p>
+      <div class="d-grid">
+        <a href="{% url 'book_resource' %}" class="btn btn-primary"><i class="fa-solid fa-plus-circle me-1"></i> Make A Reservation</a>
+      </div>
+    </div>
+
+    <!-- My Personal Reservations -->
+    <div class="glass-card">
+      <h5 class="text-bright mb-3"><i class="fa-solid fa-calendar-check text-info"></i> My Active Bookings</h5>
+      <ul class="list-unstyled mb-0" style="max-height: 380px; overflow-y: auto;">
+        {% for b in bookings %}
+          <li class="border-bottom border-secondary pb-3 mb-3">
+            <div class="d-flex justify-content-between align-items-start">
+              <span class="text-white fw-bold" style="font-size: 0.9rem;">{{ b.asset.name }}</span>
+              <span class="badge rounded-pill bg-opacity-20 {% if b.status == 'upcoming' %}bg-primary text-primary{% elif b.status == 'ongoing' %}bg-success text-success{% else %}bg-secondary text-secondary{% endif %}" style="font-size: 0.7rem;">
+                {{ b.get_status_display }}
+              </span>
+            </div>
+            <div class="text-muted small mt-1">
+              <i class="fa-regular fa-clock me-1"></i> {{ b.start_time|date:"M d, H:i" }} - {{ b.end_time|date:"H:i" }}
+            </div>
+            {% if b.status == 'upcoming' or b.status == 'ongoing' %}
+              <div class="mt-2 text-end">
+                <a href="{% url 'cancel_booking' b.pk %}" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.75rem;" onclick="return confirm('Cancel this reservation?');">Cancel</a>
+              </div>
+            {% endif %}
+          </li>
+        {% empty %}
+          <li class="text-muted text-center py-4 small">No reservation records found.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    const assetSelect = document.getElementById('assetSelectCalendar');
+    
+    if (calendarEl && assetSelect) {
+      let calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        themeSystem: 'bootstrap5',
+        events: assetSelect.value ? `/bookings/api/events/${assetSelect.value}/` : [],
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        eventTimeFormat: {
+          hour: '2-digit',
+          minute: '2-digit',
+          meridiem: false,
+          hour12: false
+        }
+      });
+      
+      calendar.render();
+      
+      assetSelect.addEventListener('change', function() {
+        calendar.removeAllEventSources();
+        if (assetSelect.value) {
+          calendar.addEventSource(`/bookings/api/events/${assetSelect.value}/`);
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}

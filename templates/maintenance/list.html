@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance Operations - AssetFlow{% endblock %}
+{% block page_header %}Maintenance Operations{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="m-0">Maintenance Requests</h5>
+    <a href="{% url 'raise_maintenance' %}" class="btn btn-primary btn-sm"><i class="fa-solid fa-plus me-1"></i> Request Repair Work</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-dark table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Asset</th>
+          <th>Tag</th>
+          <th>Priority</th>
+          <th>Raised By</th>
+          <th>Date</th>
+          <th>Technician</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+          <tr>
+            <td><a href="{% url 'maintenance_detail' r.id %}" class="text-decoration-none text-white fw-bold">Maint-{{ r.id }}</a></td>
+            <td class="text-white">{{ r.asset.name }}</td>
+            <td><code class="text-violet" style="color: #a78bfa;">{{ r.asset.asset_tag }}</code></td>
+            <td>
+              <span class="badge {% if r.priority == 'critical' or r.priority == 'high' %}bg-danger{% elif r.priority == 'medium' %}bg-warning{% else %}bg-info{% endif %} bg-opacity-25 text-white">
+                {{ r.get_priority_display }}
+              </span>
+            </td>
+            <td>{{ r.raised_by.email }}</td>
+            <td>{{ r.created_at|date:"Y-m-d" }}</td>
+            <td>{{ r.assigned_technician.email|default:"-" }}</td>
+            <td>
+              <span class="badge bg-opacity-25 {% if r.status == 'resolved' %}bg-success text-success{% elif r.status == 'pending' %}bg-warning text-warning{% else %}bg-info text-info{% endif %}">
+                {{ r.get_status_display }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url 'maintenance_detail' r.id %}" class="btn btn-sm btn-outline-light"><i class="fa-solid fa-eye"></i> View</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-4">No maintenance jobs logged.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
